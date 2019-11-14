@@ -1,0 +1,212 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Atempting to understand how pasrse works ...
+
+```{r}
+require()
+cat(readLines("./scripts/001-simple.R"), sep = "\n")
+```
+
+```{r}
+parse("./scripts/001-simple.R")
+```
+
+Alright ... so it returns an expression ...
+which can be converted to a list
+
+```{r}
+parsed_file <- parse("./scripts/001-simple.R")
+
+as.list(parsed_file)
+
+```
+
+and ... what is each element of the list ?
+
+```{r}
+lapply(as.list(parsed_file), class)
+```
+
+Thats interesting ... that means that assignments can be found as elements with class `<-`
+
+what if we call as a list all elements of the former ...
+
+```{r}
+lapply(as.list(parsed_file), as.list)
+```
+
+
+so hypothetically ... if we subsetted all elements of class `<-` and got
+element 2, we would get the defined variable.
+
+
+```{r}
+is_assign <- "<-" == sapply(as.list(parsed_file), class)
+
+lapply(as.list(parsed_file)[is_assign], function(...) ...[[2]])
+```
+
+and element 3 ... value that was assigned
+
+```{r}
+lapply(as.list(parsed_file)[is_assign], function(...) ...[[3]])
+lapply(as.list(parsed_file)[is_assign], function(...) class(...[[3]]))
+
+```
+
+One could go down the rabbit-hole and make each of those a list ...
+
+```{r}
+lapply(as.list(parsed_file)[is_assign], function(...) as.list(...[[3]]))
+```
+
+```{r}
+unlist(lapply(as.list(parsed_file)[is_assign], function(...) as.list(...[[3]]))) %>% lapply(class)
+
+```
+
+
+```{r}
+unlist_calls <- function(...) {
+    tmp <- as.list(...)
+    for (i in seq_along(tmp)) {
+        if (is.call(tmp[[i]])) {
+            tmp[[i]] <- unlist_calls(tmp[[i]])
+        }
+    }
+    return(tmp)
+}
+
+
+```
+
+
+```{r}
+lapply(as.list(parsed_file)[is_assign], function(...) ...[[3]])
+lapply(as.list(parsed_file)[is_assign], function(...) class(...[[3]]))
+
+
+unlist(as.list(str2lang("foo(1,2,3,4,5)")))
+rapply()
+```
+
+
+After all of this i found out that rapply can recursively apply a function...
+such as as.list
+
+```{r}
+rapply(parsed_file, as.list, how = "list") %>% 
+    rapply(., as.list, how = "list") %>% 
+    unlist() %>% 
+    lapply(class)
+```
+
+So we can make a lot of intermediate functions ...
+
+```{r}
+unlist_call <- function(element) {
+    if (is.call(element)) {
+        elem_list <- as.list(element)
+        ret <- list(
+            call_name = elem_list[[1]],
+            arguments = elem_list[-1])
+        return(ret)
+    } else {
+        return(element)
+    }
+}
+
+recunlist_calls <- function(my_list) {
+    tmp <- rapply(my_list, unlist_call, how = "list")
+    
+    if (identical(tmp, my_list)) {
+        return(tmp)
+    } else {
+        recunlist_calls(tmp)
+    }
+}
+
+parse_assign <- function(my_list) {
+    assigned_var <- my_list[[1]]
+    assigned_val <- my_list[-1]
+    
+    return(list(assigned_var = assigned_var, 
+                assigned_val = assigned_val))
+    
+}
+
+get_global_df <- function(parsed_file) {
+    tmp <- recunlist_calls(parsed_file) %>% 
+        purrr::transpose() %>% 
+        as_tibble() %>% 
+        mutate(call_name = as.character(call_name)) %>% 
+        filter(call_name == "`<-`") %>%
+        mutate(arguments = purrr::map(arguments, parse_assign))  %>%
+        .[[2]] %>% 
+        purrr::transpose() %>% 
+        as_tibble() %>% 
+        mutate(assigned_var = as.character(assigned_var))
+    
+    tmp[[2]] <- lapply(tmp[[2]], replace_singlets)
+    return(tmp)
+}
+
+get_globals <- function(parsed_file) {
+    
+    ret <- get_global_df(parsed_file)
+    
+    return(ret[["assigned_var"]])
+}
+
+
+get_globals(parsed_file)
+get_global_df(parsed_file)
+
+get_dependencies <- function(parsed_file) {
+    global_df <- get_global_df(parsed_file)
+    
+    var_names <- global_df[["assigned_var"]]
+    
+    global_df[["Dependencies"]] <- lapply(
+        global_df[["assigned_val"]], 
+        FUN = unlist, 
+        recursive = FALSE, 
+        use.names = FALSE)
+
+    global_df[["Global_Dependencies"]] <- purrr::map(
+        global_df[["Dependencies"]],
+        ~ var_names[var_names %in% as.character(.x)])
+    
+    global_df <- global_df[,c("assigned_var", "Global_Dependencies")]
+    colnames(global_df) <- c("To", "From")
+    
+    unnested_df <- unnest(global_df, cols = c("From"))
+    return(unnested_df)
+}
+
+replace_singlets <- function(my_list) {
+    if (is.list(my_list) & length(my_list) == 1) {
+        return(my_list[[1]])
+    } else {
+        return(my_list)
+    }
+}
+```
+
+and get a graph based on the names ...
+
+```{r}
+get_dependencies(parsed_file)
+
+g <- igraph::graph_from_data_frame(get_dependencies(parsed_file))
+plot(g)
+
+```
+
+so each element is an expression, the first element of that list is the main function, "<-" for assignment
+
+
+
