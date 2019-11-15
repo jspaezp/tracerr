@@ -6,7 +6,7 @@ output: html_notebook
 Atempting to understand how pasrse works ...
 
 ```{r}
-require()
+require(tidyverse)
 cat(readLines("./scripts/001-simple.R"), sep = "\n")
 ```
 
@@ -106,6 +106,8 @@ rapply(parsed_file, as.list, how = "list") %>%
 
 So we can make a lot of intermediate functions ...
 
+so each element is an expression, the first element of that list is the main function, "<-" for assignment
+
 ```{r}
 unlist_call <- function(element) {
     if (is.call(element)) {
@@ -141,14 +143,14 @@ parse_assign <- function(my_list) {
 get_global_df <- function(parsed_file) {
     tmp <- recunlist_calls(parsed_file) %>% 
         purrr::transpose() %>% 
-        as_tibble() %>% 
-        mutate(call_name = as.character(call_name)) %>% 
-        filter(call_name == "`<-`") %>%
-        mutate(arguments = purrr::map(arguments, parse_assign))  %>%
+        dplyr::as_tibble() %>% 
+        dplyr::mutate(call_name = as.character(call_name)) %>% 
+        dplyr::filter(call_name == "`<-`") %>%
+        dplyr::mutate(arguments = purrr::map(arguments, parse_assign))  %>%
         .[[2]] %>% 
         purrr::transpose() %>% 
-        as_tibble() %>% 
-        mutate(assigned_var = as.character(assigned_var))
+        dplyr::as_tibble() %>% 
+        dplyr::mutate(assigned_var = as.character(assigned_var))
     
     tmp[[2]] <- lapply(tmp[[2]], replace_singlets)
     return(tmp)
@@ -183,7 +185,7 @@ get_dependencies <- function(parsed_file) {
     global_df <- global_df[,c("assigned_var", "Global_Dependencies")]
     colnames(global_df) <- c("To", "From")
     
-    unnested_df <- unnest(global_df, cols = c("From"))
+    unnested_df <- tidyr::unnest(global_df, cols = c("From"))
     return(unnested_df)
 }
 
@@ -205,8 +207,4 @@ g <- igraph::graph_from_data_frame(get_dependencies(parsed_file))
 plot(g)
 
 ```
-
-so each element is an expression, the first element of that list is the main function, "<-" for assignment
-
-
 
