@@ -104,6 +104,12 @@ rapply(parsed_file, as.list, how = "list") %>%
     lapply(class)
 ```
 
+```{r}
+rapply(as.list(str2lang("foo(asd[1],2,3,4,5)")), as.list, how = "replace")
+
+```
+
+
 So we can make a lot of intermediate functions ...
 
 ```{r}
