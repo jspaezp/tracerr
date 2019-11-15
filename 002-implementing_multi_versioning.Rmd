@@ -1,0 +1,65 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+require(tidyverse)
+source("./R/parser_funs.R")
+
+parsed_file <- parse("./scripts/002-simple2.R")
+
+get_dependencies(parsed_file)
+
+g <- igraph::graph_from_data_frame(
+    get_dependencies(
+        parsed_file, 
+        unique_names = FALSE))
+plot(g)
+```
+
+# Implementing multiple versioning of files
+
+```{r}
+global_df <- get_global_df(parsed_file)
+global_df <- listify_dependency_df(global_df)
+
+uniquify_globals <- function(global_df) {
+    curr_name_map <- unique(global_df[["assigned_var"]])
+    names(curr_name_map) <- curr_name_map
+    
+    global_df[["original_assigned_var"]] <- global_df[["assigned_var"]]
+    global_df[["assigned_var"]] <- make.names(
+        global_df[["assigned_var"]], 
+        unique = TRUE)
+    
+    for (row_num in seq_len(nrow(global_df))) {
+        curr_row <- global_df[row_num,]
+        
+        global_deps_lgl <- global_df[["Dependencies"]][[row_num]] %in%
+            names(curr_name_map) 
+        global_deps <- global_df[["Dependencies"]][[row_num]][global_deps_lgl]
+        
+        global_df[["Dependencies"]][[row_num]][global_deps_lgl] <-
+            curr_name_map[global_deps]
+        
+        curr_name_map[[curr_row[["original_assigned_var"]]]] <- 
+            curr_row[["assigned_var"]]
+    }   
+    return(global_df)
+}
+
+uniquify_globals(global_df)
+uniquify_globals(global_df)[["Dependencies"]]
+```
+
+```{r}
+get_dependencies(parsed_file, unique_names = FALSE)
+
+get_dependencies(parsed_file, unique_names = TRUE)
+g <- igraph::graph_from_data_frame(get_dependencies(parsed_file, unique_names = TRUE))
+plot(g)
+
+get_dependencies(parsed_file, unique_names = FALSE)
+```
+
