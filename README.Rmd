@@ -1,0 +1,65 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# tracerr
+
+<!-- badges: start -->
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
+<!-- badges: end -->
+
+The goal of tracerr is to ...
+
+## Installation
+
+You can install the development version 
+from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("jspaezp/tracerr")
+```
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+```{r example}
+library(tracerr)
+## basic example code
+## 
+r_str <- "
+    b <- 1:2
+    a <- sum(b)
+    a <- sum(a)
+    c <- sum(a)
+    print(c)
+    "
+
+parsed_expr <- parse(text = r_str)
+get_dependencies(parsed_expr, unique_names = FALSE)
+```
+
+```{r}
+get_dependencies(parsed_expr, unique_names = TRUE)
+```
+
+
+```{r}
+library(igraph)
+g <- igraph::graph_from_data_frame(
+    get_dependencies(parsed_expr, unique_names = TRUE))
+plot(g)
+
+```
+

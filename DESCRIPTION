@@ -1,15 +1,22 @@
 Package: tracerr
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
+Title: Traces variable dependencies in R scripts
+Version: 0.0.0.0001
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "J. Sebastian",
+           family = "Paez",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+           email = "jpaezpae@purdue.edu",
+           comment = c(ORCID = "0000-0002-0065-1474"))
 Description: What the package does (one paragraph).
-License: What license it uses
+License: MIT
 Encoding: UTF-8
 LazyData: true
 Suggests: 
     testthat (>= 2.1.0)
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 6.1.1
+Imports: 
+    purrr,
+    dplyr,
+    igraph,
+    tidyr

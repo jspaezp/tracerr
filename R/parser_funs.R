@@ -77,6 +77,9 @@ parse_assign <- function(my_list) {
 #' @export
 #'
 #' @examples
+#'
+#' @importFrom dplyr as_tibble mutate filter %>%
+#' @importFrom purrr transpose
 get_global_df <- function(parsed_file) {
     tmp <- recunlist_calls(parsed_file) %>%
         purrr::transpose(.l = .) %>%
@@ -108,7 +111,7 @@ get_globals <- function(parsed_file) {
     return(ret[["assigned_var"]])
 }
 
-
+#' @importFrom purrr map
 listify_dependency_df <- function(global_df) {
     global_df[["Dependencies"]] <- lapply(
         global_df[["assigned_val"]],
@@ -163,6 +166,7 @@ uniquify_globals <- function(global_df) {
 #' @export
 #'
 #' @examples
+#' @importFrom tidyr unnest
 get_dependencies <- function(parsed_file, unique_names = TRUE) {
     global_df <- get_global_df(parsed_file)
 
